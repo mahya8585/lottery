@@ -169,7 +169,7 @@ function handleAdminUnauthorized(response) {
     return false;
   }
   adminDashboard?.classList.add('hidden');
-  alert('セッションの有効期限が切れました。再度ログインしてください。');
+  alert('ログインが必要です。再度ログインしてください。');
   adminPasswordInput?.focus();
   return true;
 }
@@ -249,6 +249,17 @@ async function importCsv(fileInputId, endpoint, label) {
     alert(`${label}の登録に失敗しました`);
   }
 }
+
+document.getElementById('logoutButton')?.addEventListener('click', async () => {
+  try {
+    await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch (error) {
+    // Hide the dashboard even if the request fails.
+  }
+  adminDashboard?.classList.add('hidden');
+  winnerTableBody.innerHTML = '';
+  exportLink.href = '#';
+});
 
 document.getElementById('importParticipantsButton')?.addEventListener('click', () => {
   importCsv('participantsFile', '/api/admin/participants/import', '参加者');

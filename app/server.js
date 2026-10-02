@@ -251,7 +251,7 @@ function createLotteryServer(options = {}) {
     pruneAdminSessions();
     const token = crypto.randomBytes(32).toString('base64url');
     adminSessions.set(token, Date.now() + adminSessionTtlMs);
-    response.setHeader('Set-Cookie', sessionCookie(token, Math.floor(adminSessionTtlMs / 1000)));
+    response.setHeader('Set-Cookie', sessionCookie(token, Math.ceil(adminSessionTtlMs / 1000)));
     writeJson(response, 200, { ok: true });
   }
 
