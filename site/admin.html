@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>管理者ページ | Lucky Draw</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell narrow">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Admin</p>
+          <h1>抽選管理</h1>
+        </div>
+        <a class="admin-link" href="/">参加者ページ</a>
+      </header>
+
+      <main class="content">
+        <section class="card admin-panel">
+          <label for="adminPassword">管理者パスワード</label>
+          <input id="adminPassword" type="password" placeholder="パスワードを入力" />
+          <button id="loginButton" type="button">ログイン</button>
+        </section>
+
+        <section class="card hidden" id="adminDashboard">
+          <div class="dashboard-actions">
+            <button id="resetButton" class="secondary" type="button">イベントをリセット</button>
+            <button id="closeButton" class="secondary" type="button">抽選を締め切る</button>
+            <a id="exportLink" class="button-link" href="#">CSV出力</a>
+          </div>
+
+          <div class="stats-grid compact">
+            <div>
+              <span class="label">状態</span>
+              <strong id="adminStatus">-</strong>
+            </div>
+            <div>
+              <span class="label">当選者数</span>
+              <strong id="adminWins">0</strong>
+            </div>
+            <div>
+              <span class="label">残り当たり数</span>
+              <strong id="adminRemaining">-</strong>
+            </div>
+          </div>
+
+          <h3>当選結果</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>No.</th>
+                  <th>参加者</th>
+                  <th>結果</th>
+                  <th>判定</th>
+                </tr>
+              </thead>
+              <tbody id="winnerTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/script.js"></script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GitHub + Microsoft All Hands 2026 Lucky Draw</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">GitHub × Microsoft</p>
+          <h1 id="eventTitle">All Hands 2026 Lucky Draw</h1>
+        </div>
+        <div class="topbar-actions">
+          <div class="pill-group" aria-label="event status">
+            <span class="chip chip-blue">1人1回</span>
+          </div>
+          <a class="admin-link" href="/admin">管理者ページ</a>
+        </div>
+      </header>
+
+      <main class="draw-layout single">
+        <section class="machine-panel card" aria-live="polite">
+          <div class="machine-head">
+            <span class="badge">Lucky Draw</span>
+            <span class="status-pill">Live</span>
+          </div>
+
+          <div class="machine-shell">
+            <div class="machine-top-plate"></div>
+            <div class="machine" aria-live="polite">
+              <div class="machine-lamps" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="machine-glass">
+                <div class="display-label">Prize</div>
+                <div id="prizeDisplay" class="prize-display">?</div>
+              </div>
+              <div class="machine-rod" aria-hidden="true"></div>
+            </div>
+            <div class="machine-tray" aria-hidden="true"></div>
+          </div>
+
+          <button id="drawButton" class="draw-button" type="button">くじを引く</button>
+          <div id="resultBox" class="result-box hidden" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/script.js"></script>
+  </body>
+</html>
