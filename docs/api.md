@@ -4,7 +4,8 @@ The API runs in the same Node.js process that serves the frontend.
 
 ## Required settings
 
-- `ADMIN_KEY`: Administrator password used by the existing `adminKey` query parameter.
+- `ADMIN_KEY`: Administrator password. It is sent only once in the JSON body of
+  `POST /api/admin/login` and is never accepted in the URL.
 - `CODE_PEPPER`: Secret used to HMAC participant codes before storing them.
 - `DATA_FILE`: State file path. The deployment defaults to `/home/data/lottery-state.json`.
 
@@ -44,12 +45,22 @@ is found in the generated deployment package.
 
 - `GET /health`
 - `POST /api/draw` with JSON `{ "participantCode": "CODE-0001" }`
-- `GET /api/admin/stats?adminKey=...`
-- `POST /api/admin/participants/import?adminKey=...` with a CSV body
-- `POST /api/admin/prizes/import?adminKey=...` with a CSV body
-- `POST /api/admin/reset?adminKey=...`
-- `POST /api/admin/close?adminKey=...`
-- `GET /api/admin/export?adminKey=...`
+- `POST /api/admin/login` with JSON `{ "password": "..." }`
+- `POST /api/admin/logout`
+- `GET /api/admin/stats`
+- `POST /api/admin/participants/import` with a CSV body
+- `POST /api/admin/prizes/import` with a CSV body
+- `POST /api/admin/reset`
+- `POST /api/admin/close`
+- `GET /api/admin/export`
+
+## Administrator authentication
+
+`POST /api/admin/login` verifies the password and issues a random session token in
+the `lottery_admin_session` cookie (`Path=/api/admin; HttpOnly; Secure;
+SameSite=Strict`). The session expires after 30 minutes. All other
+`/api/admin/*` endpoints require this cookie and return `401` otherwise. Sessions
+are held in process memory, so they are cleared when the app restarts.
 
 The local JSON file is suitable only for the selected single-instance F1
 configuration. It can be lost during platform or storage failures and must not be

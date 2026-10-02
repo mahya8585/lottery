@@ -4,6 +4,8 @@ const http = require('node:http');
 const path = require('node:path');
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const ADMIN_SESSION_COOKIE = 'lottery_admin_session';
+const DEFAULT_ADMIN_SESSION_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_STATE = Object.freeze({
   version: 1,
   status: 'open',
@@ -128,6 +130,8 @@ function createLotteryServer(options = {}) {
   const adminKey = options.adminKey ?? process.env.ADMIN_KEY ?? '';
   const codePepper = options.codePepper ?? process.env.CODE_PEPPER ?? '';
   const randomInt = options.randomInt || crypto.randomInt;
+  const adminSessionTtlMs = options.adminSessionTtlMs ?? DEFAULT_ADMIN_SESSION_TTL_MS;
+  const adminSessions = new Map();
   let mutationQueue = Promise.resolve();
 
   function hashCode(code) {
@@ -181,15 +185,83 @@ function createLotteryServer(options = {}) {
     writeJson(response, statusCode, { ok: false, error: message });
   }
 
-  function isAdminRequest(url) {
-    if (!adminKey) {
-      return false;
-    }
-    const supplied = url.searchParams.get('adminKey') || '';
-    const expectedBuffer = Buffer.from(adminKey);
+  function safeEqual(expected, supplied) {
+    const expectedBuffer = Buffer.from(expected);
     const suppliedBuffer = Buffer.from(supplied);
     return expectedBuffer.length === suppliedBuffer.length
       && crypto.timingSafeEqual(expectedBuffer, suppliedBuffer);
+  }
+
+  function readCookie(request, name) {
+    const header = request.headers.cookie || '';
+    for (const part of header.split(';')) {
+      const separator = part.indexOf('=');
+      if (separator !== -1 && part.slice(0, separator).trim() === name) {
+        return part.slice(separator + 1).trim();
+      }
+    }
+    return '';
+  }
+
+  function sessionCookie(token, maxAgeSeconds) {
+    return `${ADMIN_SESSION_COOKIE}=${token}; Path=/api/admin; Max-Age=${maxAgeSeconds}; HttpOnly; Secure; SameSite=Strict`;
+  }
+
+  function pruneAdminSessions(now = Date.now()) {
+    for (const [token, expiresAt] of adminSessions) {
+      if (expiresAt <= now) {
+        adminSessions.delete(token);
+      }
+    }
+  }
+
+  function isAdminRequest(request) {
+    if (!adminKey) {
+      return false;
+    }
+    const token = readCookie(request, ADMIN_SESSION_COOKIE);
+    if (!token) {
+      return false;
+    }
+    const expiresAt = adminSessions.get(token);
+    if (!expiresAt) {
+      return false;
+    }
+    if (expiresAt <= Date.now()) {
+      adminSessions.delete(token);
+      return false;
+    }
+    return true;
+  }
+
+  async function adminLogin(request, response) {
+    let input;
+    try {
+      input = JSON.parse(await readBody(request) || '{}');
+    } catch (error) {
+      writeApiError(response, error.statusCode || 400, '認証に失敗しました。');
+      return;
+    }
+    const password = typeof input?.password === 'string' ? input.password : '';
+    if (!password || !safeEqual(adminKey, password)) {
+      writeApiError(response, 401, '認証に失敗しました。');
+      return;
+    }
+
+    pruneAdminSessions();
+    const token = crypto.randomBytes(32).toString('base64url');
+    adminSessions.set(token, Date.now() + adminSessionTtlMs);
+    response.setHeader('Set-Cookie', sessionCookie(token, Math.ceil(adminSessionTtlMs / 1000)));
+    writeJson(response, 200, { ok: true });
+  }
+
+  function adminLogout(request, response) {
+    const token = readCookie(request, ADMIN_SESSION_COOKIE);
+    if (token) {
+      adminSessions.delete(token);
+    }
+    response.setHeader('Set-Cookie', sessionCookie('', 0));
+    writeJson(response, 200, { ok: true });
   }
 
   async function readBody(request) {
@@ -297,12 +369,21 @@ function createLotteryServer(options = {}) {
       writeApiError(response, 503, '管理APIが設定されていません。');
       return;
     }
-    if (!isAdminRequest(url)) {
+
+    const pathname = url.pathname;
+    if (request.method === 'POST' && pathname === '/api/admin/login') {
+      await adminLogin(request, response);
+      return;
+    }
+    if (request.method === 'POST' && pathname === '/api/admin/logout') {
+      adminLogout(request, response);
+      return;
+    }
+    if (!isAdminRequest(request)) {
       writeApiError(response, 401, '認証に失敗しました。');
       return;
     }
 
-    const pathname = url.pathname;
     if (request.method === 'GET' && pathname === '/api/admin/stats') {
       const state = await loadState();
       const totalHits = state.prizes.reduce((sum, prize) => sum + prize.quantity, 0);

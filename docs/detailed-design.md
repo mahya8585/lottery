@@ -102,16 +102,17 @@ stateDiagram-v2
 
 1. `adminPassword` の前後空白を除去する。
 2. 空の場合は「管理者パスワードを入力してください」を alert 表示し、終了する。
-3. `GET /api/admin/stats?adminKey=<URL encoded password>` を呼び出す。
-4. HTTP ステータスが成功以外、または `data.ok` が false の場合は API エラーまたは「認証に失敗しました」を表示する。
-5. 成功時は `adminDashboard` から `hidden` class を除去する。
-6. 当たり上限を `state.maxHits`、`state.totalHits`、`60` の優先順で決定する。
-7. 残り当たり数を `state.remainingHits`、当たり上限の優先順で決定する。
-8. 状態、当選者数、残り当たり数を表示する。
-9. CSV 出力リンクへ管理者パスワード付き URL を設定する。
-10. `state.winners` が空なら空状態行、1 件以上なら結果行を生成する。
+3. `POST /api/admin/login` に JSON ボディ `{ "password": ... }` で送信する。成功時はサーバーがセッション Cookie を発行し、パスワード入力欄をクリアする。
+4. `GET /api/admin/stats` を呼び出す（認証はセッション Cookie）。
+5. HTTP ステータスが成功以外、または `data.ok` が false の場合は API エラーまたは「認証に失敗しました」を表示する。
+6. 成功時は `adminDashboard` から `hidden` class を除去する。
+7. 当たり上限を `state.maxHits`、`state.totalHits`、`60` の優先順で決定する。
+8. 残り当たり数を `state.remainingHits`、当たり上限の優先順で決定する。
+9. 状態、当選者数、残り当たり数を表示する。
+10. CSV 出力リンクへ `/api/admin/export` を設定する（URL に認証情報を含めない）。
+11. `state.winners` が空なら空状態行、1 件以上なら結果行を生成する。
 
-Enter キー押下時も `loadAdminData()` を実行する。
+Enter キー押下時も `loginAdmin()` を実行する。管理 API が 401 を返した場合はダッシュボードを隠し、再ログインを促す。
 
 ### 4.3 抽選結果一覧
 
@@ -133,12 +134,11 @@ sequenceDiagram
     participant API as POST /api/admin/reset
 
     Admin->>JS: リセットをクリック
-    JS->>JS: パスワード存在確認
     JS->>Admin: confirm「イベントをリセットしますか？」
     alt キャンセル
         JS-->>Admin: 処理終了
     else 続行
-        JS->>API: adminKey をクエリ指定して POST
+        JS->>API: セッション Cookie 付きで POST
         API-->>JS: { ok, error? }
         alt response.ok かつ data.ok
             JS->>Admin: 成功 alert
@@ -152,12 +152,11 @@ sequenceDiagram
 
 ### 4.5 締め切り処理
 
-1. 管理者パスワードが空の場合は alert を表示して終了する。
-2. 「抽選を締め切りますか？」の確認ダイアログを表示する。
-3. キャンセル時は終了する。
-4. `POST /api/admin/close?adminKey=<URL encoded password>` を呼び出す。
-5. 成功時は成功 alert を表示し、統計を再取得する。
-6. 失敗時は API エラーまたは「締め切りに失敗しました」を表示する。
+1. 「抽選を締め切りますか？」の確認ダイアログを表示する。
+2. キャンセル時は終了する。
+3. `POST /api/admin/close` をセッション Cookie 付きで呼び出す。
+4. 成功時は成功 alert を表示し、統計を再取得する。
+5. 失敗時は API エラーまたは「締め切りに失敗しました」を表示する。
 
 リセット処理と締め切り処理には `try/catch` がない。ネットワークエラーまたは JSON 解析エラー時は Promise rejection となり、画面上の明示的なエラー通知は行われない。
 
@@ -190,7 +189,7 @@ sequenceDiagram
 - ベース URL: ブラウザーと同一オリジン
 - 文字コード: JSON は UTF-8 を想定
 - エラー応答: JSON として解析可能であること
-- 管理者認証: 現行クライアントは `adminKey` クエリパラメーターを送信する
+- 管理者認証: `POST /api/admin/login` の JSON ボディでパスワードを一度だけ送信し、以降は `lottery_admin_session` Cookie（`HttpOnly; Secure; SameSite=Strict`、30 分で失効）で認証する。URL クエリの `adminKey` は受け付けない
 
 ### 6.2 API-01 抽選実行
 
@@ -228,7 +227,8 @@ Content-Type: application/json
 **Request**
 
 ```http
-GET /api/admin/stats?adminKey={URLエンコード済み管理者パスワード}
+GET /api/admin/stats
+Cookie: lottery_admin_session={セッショントークン}
 ```
 
 **成功 Response（クライアント要求形）**
@@ -278,7 +278,8 @@ GET /api/admin/stats?adminKey={URLエンコード済み管理者パスワード}
 ### 6.4 API-03 イベントリセット
 
 ```http
-POST /api/admin/reset?adminKey={URLエンコード済み管理者パスワード}
+POST /api/admin/reset
+Cookie: lottery_admin_session={セッショントークン}
 ```
 
 成功応答:
@@ -296,7 +297,8 @@ POST /api/admin/reset?adminKey={URLエンコード済み管理者パスワード
 ### 6.5 API-04 抽選締め切り
 
 ```http
-POST /api/admin/close?adminKey={URLエンコード済み管理者パスワード}
+POST /api/admin/close
+Cookie: lottery_admin_session={セッショントークン}
 ```
 
 成功応答:
@@ -314,7 +316,8 @@ POST /api/admin/close?adminKey={URLエンコード済み管理者パスワード
 ### 6.6 API-05 CSV 出力
 
 ```http
-GET /api/admin/export?adminKey={URLエンコード済み管理者パスワード}
+GET /api/admin/export
+Cookie: lottery_admin_session={セッショントークン}
 ```
 
 レスポンス本文の列構成は現行コードから特定できない。ブラウザーによるダウンロードを想定し、バックエンドでは少なくとも適切な `Content-Type` と `Content-Disposition` を返す必要がある。
@@ -372,7 +375,7 @@ GET /api/admin/export?adminKey={URLエンコード済み管理者パスワード
 | 項目 | 現行設計 | 詳細設計上の注意 |
 |---|---|---|
 | 通信暗号化 | App Service で HTTPS 必須 | API も同一オリジン HTTPS とする |
-| 管理者認証情報 | `adminKey` を URL に付与 | ログ・履歴への漏えいを防ぐため、本番化時は POST + セッションへ変更する |
+| 管理者認証情報 | POST ボディでログインし、短時間で失効するセッション Cookie で認証 | URL・履歴・ログへパスワードを含めない |
 | HTML エスケープ | 賞品名、参加者名、一覧の賞品名に適用 | API エラーは `innerHTML` 経由のため text 表示へ変更が必要 |
 | 重複抽選 | クライアントのボタン無効化 | サーバーで認証済み参加者単位に原子的に制御する |
 | 管理操作 | confirm のみ | API 側で認証・認可・CSRF 対策を実装する |

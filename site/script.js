@@ -138,7 +138,7 @@ async function drawPrize() {
 
 drawButton?.addEventListener('click', drawPrize);
 
-async function loadAdminData() {
+async function loginAdmin() {
   const adminPassword = adminPasswordInput.value.trim();
   if (!adminPassword) {
     alert('管理者パスワードを入力してください');
@@ -146,7 +146,40 @@ async function loadAdminData() {
   }
 
   try {
-    const response = await fetch(`/api/admin/stats?adminKey=${encodeURIComponent(adminPassword)}`);
+    const response = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ password: adminPassword }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      alert(data.error || '認証に失敗しました');
+      return;
+    }
+    adminPasswordInput.value = '';
+    await loadAdminData();
+  } catch (error) {
+    alert('認証に失敗しました');
+  }
+}
+
+function handleAdminUnauthorized(response) {
+  if (response.status !== 401) {
+    return false;
+  }
+  adminDashboard?.classList.add('hidden');
+  alert('ログインが必要です。再度ログインしてください。');
+  adminPasswordInput?.focus();
+  return true;
+}
+
+async function loadAdminData() {
+  try {
+    const response = await fetch('/api/admin/stats', { credentials: 'same-origin' });
+    if (handleAdminUnauthorized(response)) {
+      return;
+    }
     const data = await response.json();
 
     if (!response.ok || !data.ok) {
@@ -164,7 +197,7 @@ async function loadAdminData() {
     document.getElementById('adminParticipants').textContent = String(state.participantCount ?? 0);
     document.getElementById('adminDrawn').textContent = String(state.drawnCount ?? state.winners.length);
 
-    exportLink.href = `/api/admin/export?adminKey=${encodeURIComponent(adminPassword)}`;
+    exportLink.href = '/api/admin/export';
 
     winnerTableBody.innerHTML = state.winners.length
       ? state.winners.map((winner) => `
@@ -181,27 +214,30 @@ async function loadAdminData() {
   }
 }
 
-loginButton?.addEventListener('click', loadAdminData);
+loginButton?.addEventListener('click', loginAdmin);
 adminPasswordInput?.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
-    loadAdminData();
+    loginAdmin();
   }
 });
 
 async function importCsv(fileInputId, endpoint, label) {
-  const password = adminPasswordInput.value.trim();
   const file = document.getElementById(fileInputId)?.files[0];
-  if (!password || !file) {
-    alert(`管理者パスワードと${label}CSVを指定してください`);
+  if (!file) {
+    alert(`${label}CSVを指定してください`);
     return;
   }
 
   try {
-    const response = await fetch(`${endpoint}?adminKey=${encodeURIComponent(password)}`, {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+      credentials: 'same-origin',
       body: await file.text(),
     });
+    if (handleAdminUnauthorized(response)) {
+      return;
+    }
     const data = await response.json();
     if (!response.ok || !data.ok) {
       alert(data.error || `${label}の登録に失敗しました`);
@@ -214,6 +250,17 @@ async function importCsv(fileInputId, endpoint, label) {
   }
 }
 
+document.getElementById('logoutButton')?.addEventListener('click', async () => {
+  try {
+    await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch (error) {
+    // Hide the dashboard even if the request fails.
+  }
+  adminDashboard?.classList.add('hidden');
+  winnerTableBody.innerHTML = '';
+  exportLink.href = '#';
+});
+
 document.getElementById('importParticipantsButton')?.addEventListener('click', () => {
   importCsv('participantsFile', '/api/admin/participants/import', '参加者');
 });
@@ -223,18 +270,15 @@ document.getElementById('importPrizesButton')?.addEventListener('click', () => {
 });
 
 document.getElementById('resetButton')?.addEventListener('click', async () => {
-  const password = adminPasswordInput.value.trim();
-  if (!password) {
-    alert('パスワードが必要です');
-    return;
-  }
-
   const confirmed = window.confirm('イベントをリセットしますか？');
   if (!confirmed) {
     return;
   }
 
-  const response = await fetch(`/api/admin/reset?adminKey=${encodeURIComponent(password)}`, { method: 'POST' });
+  const response = await fetch('/api/admin/reset', { method: 'POST', credentials: 'same-origin' });
+  if (handleAdminUnauthorized(response)) {
+    return;
+  }
   const data = await response.json();
   if (response.ok && data.ok) {
     alert('イベントをリセットしました。');
@@ -255,18 +299,15 @@ document.getElementById('resetButton')?.addEventListener('click', async () => {
 });
 
 document.getElementById('closeButton')?.addEventListener('click', async () => {
-  const password = adminPasswordInput.value.trim();
-  if (!password) {
-    alert('パスワードが必要です');
-    return;
-  }
-
   const confirmed = window.confirm('抽選を締め切りますか？');
   if (!confirmed) {
     return;
   }
 
-  const response = await fetch(`/api/admin/close?adminKey=${encodeURIComponent(password)}`, { method: 'POST' });
+  const response = await fetch('/api/admin/close', { method: 'POST', credentials: 'same-origin' });
+  if (handleAdminUnauthorized(response)) {
+    return;
+  }
   const data = await response.json();
   if (response.ok && data.ok) {
     alert('抽選を締め切りました。');
