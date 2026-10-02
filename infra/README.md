@@ -25,7 +25,8 @@ az deployment sub create `
   --name lottery-infra `
   --location australiaeast `
   --template-file .\infra\main.bicep `
-  --parameters .\infra\main.bicepparam
+  --parameters .\infra\main.bicepparam `
+  --parameters adminKey="<admin-password>" codePepper="<random-secret>"
 
 .\infra\package.ps1
 az webapp deploy `
@@ -37,3 +38,6 @@ az webapp deploy `
 
 The packaging script adds `admin/index.html` and a dependency-free Node.js static
 server so that the existing `/` and `/admin` routes resolve correctly.
+
+Sample CSV files under `samples/` are intentionally excluded. Packaging fails if
+any CSV file is detected in the deployment archive.

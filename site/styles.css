@@ -330,6 +330,25 @@ label {
   font-weight: 700;
 }
 
+input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #0b1120;
+  color: var(--text);
+  font: inherit;
+}
+
+input[type="file"] {
+  margin-bottom: 12px;
+}
+
+.participant-code {
+  margin-bottom: 14px;
+}
+
 button,
 .admin-link,
 .button-link {
@@ -437,6 +456,19 @@ strong {
   margin-bottom: 20px;
 }
 
+.import-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.import-grid > div {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
@@ -467,6 +499,10 @@ th {
   .topbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .import-grid {
+    grid-template-columns: 1fr;
   }
 
   .topbar-actions {

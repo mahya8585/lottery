@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.46.1.21595",
-      "templateHash": "2495342698537351962"
+      "templateHash": "16099566363565959392"
     }
   },
   "parameters": {
@@ -28,6 +28,20 @@
       "defaultValue": "lottery-maishid-20261002",
       "metadata": {
         "description": "Globally unique name of the App Service."
+      }
+    },
+    "adminKey": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Administrator password for the management API."
+      }
+    },
+    "codePepper": {
+      "type": "securestring",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Secret used to hash participant codes."
       }
     }
   },
@@ -52,6 +66,12 @@
           "appServiceName": {
             "value": "[parameters('appServiceName')]"
           },
+          "adminKey": {
+            "value": "[parameters('adminKey')]"
+          },
+          "codePepper": {
+            "value": "[parameters('codePepper')]"
+          },
           "location": {
             "value": "[parameters('location')]"
           }
@@ -63,7 +83,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.46.1.21595",
-              "templateHash": "1469498871230878434"
+              "templateHash": "12347151844500146268"
             }
           },
           "parameters": {
@@ -77,6 +97,18 @@
               "type": "string",
               "metadata": {
                 "description": "Azure region for the App Service resources."
+              }
+            },
+            "adminKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Administrator password for the management API."
+              }
+            },
+            "codePepper": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Secret used to hash participant codes."
               }
             }
           },
@@ -114,12 +146,30 @@
                 "publicNetworkAccess": "Enabled",
                 "siteConfig": {
                   "linuxFxVersion": "NODE|22-lts",
-                  "appCommandLine": "pm2 serve /home/site/wwwroot --no-daemon",
+                  "appCommandLine": "node /home/site/wwwroot/server.js",
                   "alwaysOn": false,
                   "ftpsState": "Disabled",
                   "minTlsVersion": "1.2",
                   "scmMinTlsVersion": "1.2",
-                  "http20Enabled": true
+                  "http20Enabled": true,
+                  "appSettings": [
+                    {
+                      "name": "DATA_FILE",
+                      "value": "/home/data/lottery-state.json"
+                    },
+                    {
+                      "name": "ADMIN_KEY",
+                      "value": "[parameters('adminKey')]"
+                    },
+                    {
+                      "name": "CODE_PEPPER",
+                      "value": "[parameters('codePepper')]"
+                    },
+                    {
+                      "name": "WEBSITES_ENABLE_APP_SERVICE_STORAGE",
+                      "value": "true"
+                    }
+                  ]
                 }
               },
               "dependsOn": [

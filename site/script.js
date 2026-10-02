@@ -1,6 +1,7 @@
 const resultBox = document.getElementById('resultBox');
 const drawButton = document.getElementById('drawButton');
 const prizeDisplay = document.getElementById('prizeDisplay');
+const participantCodeInput = document.getElementById('participantCode');
 const SPIN_VALUES = ['当たり', 'ざんねん', '大当たり', '当たり', 'ざんねん', '当たり'];
 
 const adminPasswordInput = document.getElementById('adminPassword');
@@ -27,7 +28,7 @@ function setResult(message, isError = false) {
 
   resultBox.classList.remove('hidden');
   resultBox.classList.toggle('error', isError);
-  resultBox.innerHTML = message;
+  resultBox.textContent = message;
 }
 
 function startSpinAnimation() {
@@ -73,6 +74,13 @@ async function drawPrize() {
     return;
   }
 
+  const participantCode = participantCodeInput?.value.trim();
+  if (!participantCode) {
+    setResult('参加者コードを入力してください。', true);
+    participantCodeInput?.focus();
+    return;
+  }
+
   const machine = document.querySelector('.machine');
   if (prizeDisplay) {
     prizeDisplay.textContent = '…';
@@ -87,7 +95,7 @@ async function drawPrize() {
     const response = await fetch('/api/draw', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ participantCode }),
     });
 
     const data = await response.json();
@@ -103,17 +111,15 @@ async function drawPrize() {
         clearInterval(spinTimer);
         spinTimer = null;
       }
-      drawButton.disabled = true;
       setResult(data.error || '抽選に失敗しました。', true);
       return;
     }
 
     const winner = data.winner;
-    const resultText = `<strong>${escapeHtml(winner.prizeName)}</strong>`;
-
     stopSpinAnimation(winner.prizeName);
     drawButton.disabled = true;
-    setResult(resultText, false);
+    participantCodeInput.disabled = true;
+    setResult(winner.prizeName, false);
   } catch (error) {
     if (prizeDisplay) {
       prizeDisplay.textContent = '?';
@@ -155,6 +161,8 @@ async function loadAdminData() {
     document.getElementById('adminStatus').textContent = state.status;
     document.getElementById('adminWins').textContent = String(state.winners.filter((winner) => winner.isHit).length);
     document.getElementById('adminRemaining').textContent = `${remainingHits} / ${maxHits}`;
+    document.getElementById('adminParticipants').textContent = String(state.participantCount ?? 0);
+    document.getElementById('adminDrawn').textContent = String(state.drawnCount ?? state.winners.length);
 
     exportLink.href = `/api/admin/export?adminKey=${encodeURIComponent(adminPassword)}`;
 
@@ -180,6 +188,40 @@ adminPasswordInput?.addEventListener('keydown', (event) => {
   }
 });
 
+async function importCsv(fileInputId, endpoint, label) {
+  const password = adminPasswordInput.value.trim();
+  const file = document.getElementById(fileInputId)?.files[0];
+  if (!password || !file) {
+    alert(`管理者パスワードと${label}CSVを指定してください`);
+    return;
+  }
+
+  try {
+    const response = await fetch(`${endpoint}?adminKey=${encodeURIComponent(password)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/csv; charset=utf-8' },
+      body: await file.text(),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) {
+      alert(data.error || `${label}の登録に失敗しました`);
+      return;
+    }
+    alert(`${label}を${data.imported}件登録しました`);
+    loadAdminData();
+  } catch (error) {
+    alert(`${label}の登録に失敗しました`);
+  }
+}
+
+document.getElementById('importParticipantsButton')?.addEventListener('click', () => {
+  importCsv('participantsFile', '/api/admin/participants/import', '参加者');
+});
+
+document.getElementById('importPrizesButton')?.addEventListener('click', () => {
+  importCsv('prizesFile', '/api/admin/prizes/import', '賞品');
+});
+
 document.getElementById('resetButton')?.addEventListener('click', async () => {
   const password = adminPasswordInput.value.trim();
   if (!password) {
@@ -196,14 +238,19 @@ document.getElementById('resetButton')?.addEventListener('click', async () => {
   const data = await response.json();
   if (response.ok && data.ok) {
     alert('イベントをリセットしました。');
-  drawButton.disabled = false;
-  setResult('', false);
-  if (prizeDisplay) {
-    prizeDisplay.textContent = '?';
-  }
-  loadAdminData();
+    if (drawButton) {
+      drawButton.disabled = false;
+    }
+    if (participantCodeInput) {
+      participantCodeInput.disabled = false;
+    }
+    setResult('', false);
+    if (prizeDisplay) {
+      prizeDisplay.textContent = '?';
+    }
+    loadAdminData();
   } else {
-  alert(data.error || 'リセットに失敗しました');
+    alert(data.error || 'リセットに失敗しました');
   }
 });
 

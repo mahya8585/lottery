@@ -181,3 +181,37 @@ HTTPS 動作確認:
 
 - 本デプロイにはバックエンド API が含まれないため、抽選および管理 API 操作は動作しない。
 - ZIP デプロイ CLI は待機中にタイムアウトを報告したが、その後スタートアッププローブが成功し、OneDeploy の完了ステータスと全公開 URL の HTTP 200 を確認した。
+
+## 11. API 実装更新
+
+- 参加者コードによる一人一回の抽選制御を追加する。
+- 参加者コードは `CODE_PEPPER` を使用した HMAC-SHA256 で保存する。
+- 参加者CSVと賞品CSVの管理APIを追加する。
+- 暗号学的乱数と残り参加者数・賞品在庫に基づく抽選を実装する。
+- 管理統計、リセット、締め切り、CSV出力APIを実装する。
+- CSV Formula Injectionを無害化する。
+- `/home/data/lottery-state.json` へ原子的に保存する。
+- `ADMIN_KEY` と `CODE_PEPPER` はBicepのセキュアパラメーターで実行時に設定し、リポジトリへ保存しない。
+- App Service F1の単一インスタンス構成を維持する。
+
+API更新の検証:
+
+- 2026-10-02: Node.js APIテスト4件がすべて成功。
+- 2026-10-02: `app/server.js` と `site/script.js` の構文検証に成功。
+- 2026-10-02: Bicepビルドおよびlintに成功。
+- 2026-10-02: APIを含むZIPパッケージの構成検証に成功。
+- 2026-10-02: セキュアパラメーターを指定したARM事前検証に成功。
+- 2026-10-02: API更新後のwhat-ifに成功。削除対象は0件。
+- 2026-10-02: マネージドIDや外部Azureデータサービスを追加していないため、追加RBACは不要と確認。
+
+API更新のデプロイ結果:
+
+- サブスクリプションデプロイ `lottery-api-20261002`: `Succeeded`
+- OneDeploy: `RuntimeSuccessful`
+- `GET /health`: HTTP 200、`ok: true`
+- 正しい管理者キーによる `GET /api/admin/stats`: HTTP 200
+- 不正な管理者キーによる `GET /api/admin/stats`: HTTP 401
+- 参加者コード入力UI: 配信確認済み
+- 参加者CSVおよび賞品CSV登録UI: 配信確認済み
+- App Service設定 `ADMIN_KEY`、`CODE_PEPPER`、`DATA_FILE`、`WEBSITES_ENABLE_APP_SERVICE_STORAGE`: 設定済み
+- ライブRBAC確認: マネージドIDなし、追加ロール不要

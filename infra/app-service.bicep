@@ -4,6 +4,14 @@ param appServiceName string
 @description('Azure region for the App Service resources.')
 param location string
 
+@secure()
+@description('Administrator password for the management API.')
+param adminKey string
+
+@secure()
+@description('Secret used to hash participant codes.')
+param codePepper string
+
 var appServicePlanName = '${appServiceName}-plan'
 
 resource appServicePlan 'Microsoft.Web/serverfarms@2024-11-01' = {
@@ -39,6 +47,24 @@ resource appService 'Microsoft.Web/sites@2024-11-01' = {
       minTlsVersion: '1.2'
       scmMinTlsVersion: '1.2'
       http20Enabled: true
+      appSettings: [
+        {
+          name: 'DATA_FILE'
+          value: '/home/data/lottery-state.json'
+        }
+        {
+          name: 'ADMIN_KEY'
+          value: adminKey
+        }
+        {
+          name: 'CODE_PEPPER'
+          value: codePepper
+        }
+        {
+          name: 'WEBSITES_ENABLE_APP_SERVICE_STORAGE'
+          value: 'true'
+        }
+      ]
     }
   }
 }

@@ -46,6 +46,16 @@
             <div class="machine-tray" aria-hidden="true"></div>
           </div>
 
+          <div class="participant-code">
+            <label for="participantCode">参加者コード</label>
+            <input
+              id="participantCode"
+              type="text"
+              maxlength="128"
+              autocomplete="one-time-code"
+              placeholder="配布されたコードを入力"
+            />
+          </div>
           <button id="drawButton" class="draw-button" type="button">くじを引く</button>
           <div id="resultBox" class="result-box hidden" aria-live="polite"></div>
         </section>

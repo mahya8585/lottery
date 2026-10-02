@@ -24,6 +24,19 @@
         </section>
 
         <section class="card hidden" id="adminDashboard">
+          <div class="import-grid">
+            <div>
+              <label for="participantsFile">参加者CSV（code,name）</label>
+              <input id="participantsFile" type="file" accept=".csv,text/csv" />
+              <button id="importParticipantsButton" class="secondary" type="button">参加者を登録</button>
+            </div>
+            <div>
+              <label for="prizesFile">賞品CSV（prizeName,quantity）</label>
+              <input id="prizesFile" type="file" accept=".csv,text/csv" />
+              <button id="importPrizesButton" class="secondary" type="button">賞品を登録</button>
+            </div>
+          </div>
+
           <div class="dashboard-actions">
             <button id="resetButton" class="secondary" type="button">イベントをリセット</button>
             <button id="closeButton" class="secondary" type="button">抽選を締め切る</button>
@@ -42,6 +55,14 @@
             <div>
               <span class="label">残り当たり数</span>
               <strong id="adminRemaining">-</strong>
+            </div>
+            <div>
+              <span class="label">参加者数</span>
+              <strong id="adminParticipants">0</strong>
+            </div>
+            <div>
+              <span class="label">抽選済み</span>
+              <strong id="adminDrawn">0</strong>
             </div>
           </div>
 
