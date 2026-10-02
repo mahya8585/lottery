@@ -143,10 +143,10 @@ flowchart LR
 | IF ID | メソッド | パス | 用途 | 認証情報 | 現行リポジトリ内の実装 |
 |---|---|---|---|---|---|
 | API-01 | POST | `/api/draw` | 抽選実行 | なし | 呼び出しのみ |
-| API-02 | GET | `/api/admin/stats` | 管理統計取得・認証判定 | `adminKey` クエリ | 呼び出しのみ |
-| API-03 | POST | `/api/admin/reset` | イベントリセット | `adminKey` クエリ | 呼び出しのみ |
-| API-04 | POST | `/api/admin/close` | 抽選締め切り | `adminKey` クエリ | 呼び出しのみ |
-| API-05 | GET | `/api/admin/export` | CSV 出力 | `adminKey` クエリ | URL 生成のみ |
+| API-02 | GET | `/api/admin/stats` | 管理統計取得・認証判定 | セッション Cookie | 呼び出しのみ |
+| API-03 | POST | `/api/admin/reset` | イベントリセット | セッション Cookie | 呼び出しのみ |
+| API-04 | POST | `/api/admin/close` | 抽選締め切り | セッション Cookie | 呼び出しのみ |
+| API-05 | GET | `/api/admin/export` | CSV 出力 | セッション Cookie | URL 生成のみ |
 
 ## 8. データ設計概要
 
